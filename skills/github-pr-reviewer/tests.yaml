@@ -1,0 +1,31 @@
+tests:
+  - name: "Happy Path - Safe PR diff review"
+    input:
+      repo_owner: "PSMRI"
+      repo_name: "AMRIT"
+      pr_number: 101
+    expected: "No code syntax issues found in diff hunk."
+  - name: "Missing catch block in diff"
+    input:
+      repo_owner: "PSMRI"
+      repo_name: "AMRIT"
+      pr_number: 102
+    expected: "unhandled promise rejection"
+  - name: "Invalid repo name format"
+    input:
+      repo_owner: "PSMRI"
+      repo_name: "invalid/name"
+      pr_number: 103
+    expected: "Error: Invalid repository name format"
+  - name: "PR number is negative"
+    input:
+      repo_owner: "PSMRI"
+      repo_name: "AMRIT"
+      pr_number: -5
+    expected: "Error: PR number must be positive"
+  - name: "Adversarial payload - SQL injection command injection"
+    input:
+      repo_owner: "PSMRI; rm -rf"
+      repo_name: "AMRIT"
+      pr_number: 104
+    expected: "rejected"

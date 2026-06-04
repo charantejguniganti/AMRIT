@@ -1,0 +1,14 @@
+name: "nodejs-api-reviewer"
+description: "Review Node.js APIs for security, code style, best practices, and potential memory leaks."
+version: "1.0.0"
+category: "code-quality"
+tags:
+  - nodejs
+  - api-review
+  - security
+owner: "amrit-community"
+tools:
+  - read-file
+  - run-linter
+mcp:
+  - filesystem

@@ -1,0 +1,21 @@
+tests:
+  - name: "Happy Path - Hardened Dockerfile review"
+    input:
+      file_path: "Dockerfile.hardened"
+    expected: "No critical or high vulnerability container patterns detected."
+  - name: "Vulnerable - Root default execution"
+    input:
+      file_path: "Dockerfile.root"
+    expected: "runs as root user"
+  - name: "Vulnerable - Docker socket mount in compose"
+    input:
+      file_path: "docker-compose.yml"
+    expected: "docker.sock mount detected"
+  - name: "Invalid - JSON file provided"
+    input:
+      file_path: "package.json"
+    expected: "Error: Unsupported file format"
+  - name: "Adversarial - Path traversal attempt"
+    input:
+      file_path: "../../../etc/shadow"
+    expected: "Security Violation: Path traversal"

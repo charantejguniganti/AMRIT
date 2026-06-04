@@ -1,0 +1,14 @@
+name: "github-pr-reviewer"
+description: "Automatically analyzes GitHub pull request diffs, checks formatting, and leaves constructive review comments."
+version: "1.0.0"
+category: "vcs-automation"
+tags:
+  - github
+  - pr-review
+  - automation
+owner: "amrit-community"
+tools:
+  - fetch-pr-diff
+  - post-pr-comment
+mcp:
+  - github

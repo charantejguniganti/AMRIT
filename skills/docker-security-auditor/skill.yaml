@@ -1,0 +1,15 @@
+name: "docker-security-auditor"
+description: "Audits Dockerfiles and Docker Compose files for security bad practices, root-user defaults, and dependency vulnerabilities."
+version: "1.0.0"
+category: "security"
+tags:
+  - docker
+  - container-security
+  - audit
+owner: "amrit-community"
+tools:
+  - read-file
+  - run-trivy
+mcp:
+  - docker
+  - filesystem

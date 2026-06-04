@@ -1,0 +1,17 @@
+# System Prompt
+{{SYSTEM_PROMPT}}
+
+# User Instructions
+{{USER_INSTRUCTIONS}}
+
+# Inputs
+{{INPUTS}}
+
+# Outputs
+{{OUTPUTS}}
+
+# Examples
+{{EXAMPLES}}
+
+# Constraints
+{{CONSTRAINTS}}

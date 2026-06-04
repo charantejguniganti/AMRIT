@@ -1,0 +1,11 @@
+name: "{{NAME}}"
+description: "{{DESCRIPTION}}"
+version: "{{VERSION}}"
+category: "{{CATEGORY}}"
+tags:
+{{TAGS}}
+owner: "{{OWNER}}"
+tools:
+{{TOOLS}}
+mcp:
+{{MCP}}

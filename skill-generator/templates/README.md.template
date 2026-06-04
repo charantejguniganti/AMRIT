@@ -1,0 +1,22 @@
+# {{FRIENDLY_NAME}}
+
+## Overview
+{{OVERVIEW}}
+
+## Use Cases
+{{USE_CASES}}
+
+## Inputs
+{{INPUTS_DESC}}
+
+## Outputs
+{{OUTPUTS_DESC}}
+
+## Examples
+{{EXAMPLES_DESC}}
+
+## Limitations
+{{LIMITATIONS}}
+
+## Troubleshooting
+{{TROUBLESHOOTING}}

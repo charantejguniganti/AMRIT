@@ -1,30 +1,55 @@
-# PR: Feat: AI-Powered Skill Generator for Developer Onboarding
+# feat(generator): introduce AI-powered skill scaffolding system with automated metadata, prompts, tests, and documentation generation
 
-## Description
-This PR introduces the **AI-Powered Skill Generator** to the AMRIT Agentic AI Framework under `AMRIT/skill-generator`. 
+## Problem
 
-It enables contributors and developers to bootstrap fully-functional AMRIT skills in under 60 seconds with a single natural language CLI command:
+Creating new AMRIT skills requires significant manual setup. Developers must manually write metadata (`skill.yaml`), prompt templates (`prompts.md`), test frameworks (`tests.yaml`), and extensive readmes (`README.md`), which takes between 20–60 minutes per skill. This creates friction for contributor onboarding and slows down ecosystem expansion.
+
+## Solution
+
+This PR introduces an AI-powered skill generator capable of scaffolding complete, framework-compliant skills from natural language descriptions under 60 seconds.
+
+## Features
+
+- **Anthropic-Powered Generation**: Infers skill purpose, tools, categories, and MCP requirements.
+- **Interactive Mode**: Prompts users for inputs step-by-step when description argument is omitted.
+- **Dry-Run Mode**: Visualizes files in the console without writing them to disk (`--dry-run`).
+- **Regeneration Commands**: Regenerate individual components (`prompt`, `tests`, `readme`) dynamically.
+- **Validation Layer**: Runs Zod and YAML checks to reject malformed payloads.
+- **Quality Scoring**: Outputs a `0-100` score grading metadata, prompt segments, test completeness, and README coverage.
+- **Architecture Export**: Exports the operational flow to a Mermaid.js diagram (`amrit generate diagram`).
+
+## Example
+
 ```bash
-amrit generate skill "description"
+$ amrit generate skill "review Node.js APIs"
+ℹ Starting generation workflow for skill: "review Node.js APIs"
+ℹ Sending generation request to Anthropic (claude-3-5-sonnet-latest)...
+ℹ Formatting templates for skill: "nodejs-api-reviewer"...
+ℹ Running validator schemas on generated files...
+✔ Validation passed successfully for all files.
+✔ Created: skills/nodejs-api-reviewer/skill.yaml
+✔ Created: skills/nodejs-api-reviewer/prompts.md
+✔ Created: skills/nodejs-api-reviewer/tests.yaml
+✔ Created: skills/nodejs-api-reviewer/README.md
+✔ Skill "Node.js API Reviewer" successfully generated!
+
+=============================================
+Skill Quality Score: 100/100
+✓ Metadata Config: Valid name, description, tags, version
+✓ Prompt Scaffolding: All 6 standard prompt headers exist
+✓ Scaffolded Tests: Found 5 test cases (meets criteria)
+✓ Documentation depth: All standard documentation sections exist
+=============================================
 ```
 
-## Architectural Components Added
-1. **CLI Commander Interface (`src/cli/command.ts`)**: Supports the generate pipeline and enables future expansions (`generate prompt`, `generate tests`, etc.).
-2. **AI Client Engine (`src/ai/client.ts`)**: Integrates with the Anthropic Claude API using structured outputs. It automatically infers skill categorization, domain-specific tags, MCP server requirements, and tool hooks.
-3. **Template Management (`src/templates/manager.ts`)**: Houses standardized framework placeholders for `skill.yaml`, `prompts.md`, `tests.yaml`, and `README.md`.
-4. **Validation Layer (`src/validation/schema.ts`)**: Asserts output correctness using Zod, ensuring generated skills match AMRIT standards (e.g. at least 5 test cases covering happy/adversarial paths, presence of all required prompt headers, and semver compliance).
-5. **Security Layer (`src/utils/security.ts`)**: Implements name sanitization and path traversal detection to reject unsafe commands.
+## Testing
 
-## Example Skills Included
-We have pre-packaged three complete generated skill examples:
-- **Node.js API Reviewer** (`skills/nodejs-api-reviewer`)
-- **GitHub Pull Request Reviewer** (`skills/github-pr-reviewer`)
-- **Docker Security Auditor** (`skills/docker-security-auditor`)
+- **12 unit tests** spanning path safety, schemas validation, and Quality Scorer.
+- Security filters rejecting path traversal attacks (e.g. `../../etc/passwd`).
+- Schema validation enforcing at least 5 tests (with happy path/edge cases).
 
-## Verification Status
-- Built and ran TypeScript compiler checks.
-- Created unit test suite covering path resolution safety and schema parser limits. All 10 specs pass:
-  ```bash
-  Test Suites: 2 passed, 2 total
-  Tests:       10 passed, 10 total
-  ```
+## Future Work
+
+- **Skill marketplace integration** for sharing generator output.
+- **Skill publishing workflows** to publish validated skills directly.
+- **Additional model providers** (e.g., Gemini, OpenAI).

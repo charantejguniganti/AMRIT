@@ -2,11 +2,53 @@
 import { createProgram, GenerateOptions } from './cli/command.js';
 import { SkillGenerator } from './generators/skill.js';
 import { logger } from './utils/logger.js';
+import { validateSkillName, safeResolvePath } from './utils/security.js';
+import { TemplateManager } from './templates/manager.js';
+import { SkillWriter } from './generators/writer.js';
+import { validateSkillYaml, validatePromptsMd, validateTestsYaml } from './validation/schema.js';
+import { AIClient } from './ai/client.js';
+import readline from 'readline';
+import fs from 'fs';
+import path from 'path';
+import yaml from 'js-yaml';
 
-async function handleGenerateSkill(description: string, options: GenerateOptions) {
+// Standard readline helper for Interactive Mode
+function ask(query: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) => {
+    rl.question(query, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+async function handleGenerateSkill(description: string | undefined, options: GenerateOptions) {
   try {
+    let finalDesc = description;
+    
+    // Interactive Mode
+    if (!finalDesc) {
+      logger.info('Entering Interactive Mode...');
+      const name = await ask('Skill Name (lowercase alphanumeric & hyphens): ');
+      if (!validateSkillName(name)) {
+        throw new Error('Skill name must be lowercase alphanumeric and hyphens only');
+      }
+      const desc = await ask('Description: ');
+      if (!desc || desc.length < 10) {
+        throw new Error('Description is required and must be at least 10 characters');
+      }
+      const mcps = await ask('Suggested MCP integrations (comma-separated): ');
+      const category = await ask('Category: ');
+
+      finalDesc = `Generate a skill named "${name}" in category "${category || 'general'}" described as: "${desc}". MCP integrations: [${mcps}]`;
+    }
+
     const generator = new SkillGenerator();
-    await generator.generate(description, {
+    await generator.generate(finalDesc, {
       outputDir: options.output || './skills',
       dryRun: options.dryRun,
       model: options.model,
@@ -17,8 +59,180 @@ async function handleGenerateSkill(description: string, options: GenerateOptions
   }
 }
 
+async function handleRegeneratePrompt(skillName: string, options: GenerateOptions) {
+  try {
+    logger.info(`Starting prompt regeneration for: ${skillName}`);
+    const skillsDir = options.output || './skills';
+    const baseDir = path.resolve(process.cwd());
+    const targetDir = safeResolvePath(baseDir, path.join(skillsDir, skillName));
+    const skillYamlPath = path.join(targetDir, 'skill.yaml');
+
+    if (!fs.existsSync(skillYamlPath)) {
+      throw new Error(`skill.yaml not found at: ${skillYamlPath}. Run generate skill first.`);
+    }
+
+    const skillMetadata = yaml.load(fs.readFileSync(skillYamlPath, 'utf8')) as any;
+    const aiClient = new AIClient();
+    const payload = await aiClient.generateSkill(`Regenerate detailed prompts for: ${skillMetadata.description || skillName}`);
+
+    const promptReplacements = {
+      SYSTEM_PROMPT: payload.systemPrompt,
+      USER_INSTRUCTIONS: payload.userInstructions,
+      INPUTS: payload.inputs,
+      OUTPUTS: payload.outputs,
+      EXAMPLES: payload.examples,
+      CONSTRAINTS: payload.constraints,
+    };
+
+    const templateManager = new TemplateManager();
+    const promptsMd = templateManager.render('prompts.md.template', promptReplacements);
+
+    validatePromptsMd(promptsMd);
+
+    if (options.dryRun) {
+      logger.info('--- DRY RUN ---');
+      console.log(promptsMd);
+    } else {
+      const targetFilePath = path.join(targetDir, 'prompts.md');
+      fs.writeFileSync(targetFilePath, promptsMd, 'utf8');
+      logger.success(`Regenerated and validated: ${path.relative(process.cwd(), targetFilePath)}`);
+    }
+  } catch (error: any) {
+    logger.error(`Regeneration failed: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+async function handleRegenerateTests(skillName: string, options: GenerateOptions) {
+  try {
+    logger.info(`Starting tests regeneration for: ${skillName}`);
+    const skillsDir = options.output || './skills';
+    const baseDir = path.resolve(process.cwd());
+    const targetDir = safeResolvePath(baseDir, path.join(skillsDir, skillName));
+    const skillYamlPath = path.join(targetDir, 'skill.yaml');
+
+    if (!fs.existsSync(skillYamlPath)) {
+      throw new Error(`skill.yaml not found at: ${skillYamlPath}`);
+    }
+
+    const skillMetadata = yaml.load(fs.readFileSync(skillYamlPath, 'utf8')) as any;
+    const aiClient = new AIClient();
+    const payload = await aiClient.generateSkill(`Regenerate tests for skill described as: ${skillMetadata.description || skillName}`);
+
+    const testsReplacements = {
+      TEST_CASES: SkillWriter.formatTestCases(payload.testCases),
+    };
+
+    const templateManager = new TemplateManager();
+    const testsYaml = templateManager.render('tests.yaml.template', testsReplacements);
+
+    validateTestsYaml(testsYaml);
+
+    if (options.dryRun) {
+      logger.info('--- DRY RUN ---');
+      console.log(testsYaml);
+    } else {
+      const targetFilePath = path.join(targetDir, 'tests.yaml');
+      fs.writeFileSync(targetFilePath, testsYaml, 'utf8');
+      logger.success(`Regenerated and validated: ${path.relative(process.cwd(), targetFilePath)}`);
+    }
+  } catch (error: any) {
+    logger.error(`Regeneration failed: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+async function handleRegenerateReadme(skillName: string, options: GenerateOptions) {
+  try {
+    logger.info(`Starting README regeneration for: ${skillName}`);
+    const skillsDir = options.output || './skills';
+    const baseDir = path.resolve(process.cwd());
+    const targetDir = safeResolvePath(baseDir, path.join(skillsDir, skillName));
+    const skillYamlPath = path.join(targetDir, 'skill.yaml');
+
+    if (!fs.existsSync(skillYamlPath)) {
+      throw new Error(`skill.yaml not found at: ${skillYamlPath}`);
+    }
+
+    const skillMetadata = yaml.load(fs.readFileSync(skillYamlPath, 'utf8')) as any;
+    const aiClient = new AIClient();
+    const payload = await aiClient.generateSkill(`Regenerate README markdown documentation for: ${skillMetadata.description || skillName}`);
+
+    const readmeReplacements = {
+      FRIENDLY_NAME: payload.friendlyName || skillName,
+      OVERVIEW: payload.overview,
+      USE_CASES: payload.useCases,
+      INPUTS_DESC: payload.inputsDesc,
+      OUTPUTS_DESC: payload.outputsDesc,
+      EXAMPLES_DESC: payload.examplesDesc,
+      LIMITATIONS: payload.limitations,
+      TROUBLESHOOTING: payload.troubleshooting,
+    };
+
+    const templateManager = new TemplateManager();
+    const readmeMd = templateManager.render('README.md.template', readmeReplacements);
+
+    if (options.dryRun) {
+      logger.info('--- DRY RUN ---');
+      console.log(readmeMd);
+    } else {
+      const targetFilePath = path.join(targetDir, 'README.md');
+      fs.writeFileSync(targetFilePath, readmeMd, 'utf8');
+      logger.success(`Regenerated: ${path.relative(process.cwd(), targetFilePath)}`);
+    }
+  } catch (error: any) {
+    logger.error(`Regeneration failed: ${error.message}`);
+    process.exit(1);
+  }
+}
+
+async function handleExportDiagram() {
+  try {
+    const diagramContent = `# AMRIT Skill Generation Architecture
+
+Here is the architectural data flow diagram illustrating the end-to-end scaffolding process.
+
+\`\`\`mermaid
+graph TD
+    A[CLI Input / User Prompt] --> B[SkillGenerator Orchestrator]
+    B --> C[AI Client - Anthropic Claude]
+    C --> D[Generation Payload JSON]
+    D --> E[Template Manager]
+    E --> F[Validation Layer - Zod & YAML]
+    F --> G[SkillWriter Filesystem]
+    G --> H[Output: skill.yaml]
+    G --> I[Output: prompts.md]
+    G --> J[Output: tests.yaml]
+    G --> K[Output: README.md]
+    G --> L[Skill Quality Scorer]
+\`\`\`
+
+## Component Responsibilities
+1. **CLI / Input Manager**: Collects natural language requests (or enters interactive prompting).
+2. **SkillGenerator**: Coordinates compilation phases, replacements mapping, and verification.
+3. **AI Client**: Communicates with Anthropic models to synthesize capability structures, test inputs, and documentation sections.
+4. **Template Manager**: Interleaves scaffolding structures with the AI responses.
+5. **Validation Layer**: Rejects outputs that violate semantic formatting or test sizing limits.
+6. **Skill Quality Scorer**: Audits output directories to calculate an operational score (0-100).
+`;
+
+    const filePath = path.resolve(process.cwd(), 'skill-generation-architecture.md');
+    fs.writeFileSync(filePath, diagramContent, 'utf8');
+    logger.success(`Exported Architecture Diagram to: ${path.relative(process.cwd(), filePath)}`);
+  } catch (error: any) {
+    logger.error(`Failed to export diagram: ${error.message}`);
+    process.exit(1);
+  }
+}
+
 async function main() {
-  const program = createProgram(handleGenerateSkill);
+  const program = createProgram(
+    handleGenerateSkill,
+    handleRegeneratePrompt,
+    handleRegenerateTests,
+    handleRegenerateReadme,
+    handleExportDiagram
+  );
   await program.parseAsync(process.argv);
 }
 

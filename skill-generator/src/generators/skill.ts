@@ -2,8 +2,10 @@ import { AIClient, GenerationPayload } from '../ai/client.js';
 import { TemplateManager } from '../templates/manager.js';
 import { SkillWriter, FileWritePayload } from './writer.js';
 import { validateSkillYaml, validatePromptsMd, validateTestsYaml } from '../validation/schema.js';
-import { validateSkillName } from '../utils/security.js';
+import { validateSkillName, safeResolvePath } from '../utils/security.js';
 import { logger } from '../utils/logger.js';
+import { assessSkillQuality } from '../utils/scorer.js';
+import path from 'path';
 
 export interface GeneratorConfig {
   outputDir: string;
@@ -102,5 +104,18 @@ export class SkillGenerator {
 
     this.skillWriter.writeFiles(config.outputDir, payload.name, filePayload, config.dryRun);
     logger.success(`Skill "${payload.friendlyName}" successfully generated!`);
+
+    if (!config.dryRun) {
+      const targetDir = safeResolvePath(path.resolve(process.cwd()), path.join(config.outputDir, payload.name));
+      const qualityReport = assessSkillQuality(targetDir);
+      console.log('\n=============================================');
+      console.log(`Skill Quality Score: ${qualityReport.score}/100`);
+      for (const check of qualityReport.checks) {
+        const symbol = check.passed ? '✓' : '⚠';
+        console.log(`${symbol} ${check.name}: ${check.message}`);
+      }
+      console.log('=============================================\n');
+    }
   }
 }
+

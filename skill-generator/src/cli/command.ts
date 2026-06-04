@@ -7,7 +7,11 @@ export interface GenerateOptions {
 }
 
 export function createProgram(
-  generateSkillAction: (description: string, options: GenerateOptions) => Promise<void>
+  generateSkillAction: (description: string | undefined, options: GenerateOptions) => Promise<void>,
+  regeneratePromptAction: (skillName: string, options: GenerateOptions) => Promise<void>,
+  regenerateTestsAction: (skillName: string, options: GenerateOptions) => Promise<void>,
+  regenerateReadmeAction: (skillName: string, options: GenerateOptions) => Promise<void>,
+  exportDiagramAction: () => Promise<void>
 ): Command {
   const program = new Command();
 
@@ -17,11 +21,11 @@ export function createProgram(
     .version('1.0.0');
 
   const generateCmd = new Command('generate')
-    .description('Generate skills, prompts, tests, readmes, or all');
+    .description('Generate skills, prompts, tests, readmes, or diagrams');
 
   generateCmd
-    .command('skill <description>')
-    .description('Generate a new AMRIT skill from a natural language description')
+    .command('skill [description]')
+    .description('Generate a new AMRIT skill (runs interactively if description is omitted)')
     .option('-o, --output <dir>', 'Output directory for the generated skill', './skills')
     .option('--dry-run', 'Print the generated contents to standard output instead of writing files', false)
     .option('--model <model-name>', 'Anthropic model to use for generation', 'claude-3-5-sonnet-latest')
@@ -29,33 +33,38 @@ export function createProgram(
       await generateSkillAction(description, options);
     });
 
-  // Placeholder commands for future expansion as requested
   generateCmd
-    .command('prompt')
-    .description('Generate only a prompts.md file (future expansion)')
-    .action(() => {
-      console.log('Generating prompt (coming soon)...');
+    .command('prompt <skillName>')
+    .description('Regenerate prompts.md for an existing skill')
+    .option('-o, --output <dir>', 'Skills directory', './skills')
+    .option('--dry-run', 'Dry run regeneration', false)
+    .action(async (skillName, options) => {
+      await regeneratePromptAction(skillName, options);
     });
 
   generateCmd
-    .command('tests')
-    .description('Generate only a tests.yaml file (future expansion)')
-    .action(() => {
-      console.log('Generating tests (coming soon)...');
+    .command('tests <skillName>')
+    .description('Regenerate tests.yaml for an existing skill')
+    .option('-o, --output <dir>', 'Skills directory', './skills')
+    .option('--dry-run', 'Dry run regeneration', false)
+    .action(async (skillName, options) => {
+      await regenerateTestsAction(skillName, options);
     });
 
   generateCmd
-    .command('readme')
-    .description('Generate only a README.md file (future expansion)')
-    .action(() => {
-      console.log('Generating README (coming soon)...');
+    .command('readme <skillName>')
+    .description('Regenerate README.md for an existing skill')
+    .option('-o, --output <dir>', 'Skills directory', './skills')
+    .option('--dry-run', 'Dry run regeneration', false)
+    .action(async (skillName, options) => {
+      await regenerateReadmeAction(skillName, options);
     });
 
   generateCmd
-    .command('all')
-    .description('Generate all components (future expansion)')
-    .action(() => {
-      console.log('Generating all (coming soon)...');
+    .command('diagram')
+    .description('Export the AMRIT Skill Generation Architecture Diagram to skill-generation-architecture.md')
+    .action(async () => {
+      await exportDiagramAction();
     });
 
   program.addCommand(generateCmd);

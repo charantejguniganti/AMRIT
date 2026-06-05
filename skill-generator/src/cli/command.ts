@@ -4,6 +4,7 @@ export interface GenerateOptions {
   output?: string;
   dryRun?: boolean;
   model?: string;
+  provider?: 'anthropic' | 'ollama';
 }
 
 export function createProgram(
@@ -28,7 +29,8 @@ export function createProgram(
     .description('Generate a new AMRIT skill (runs interactively if description is omitted)')
     .option('-o, --output <dir>', 'Output directory for the generated skill', './skills')
     .option('--dry-run', 'Print the generated contents to standard output instead of writing files', false)
-    .option('--model <model-name>', 'Anthropic model to use for generation', 'claude-3-5-sonnet-latest')
+    .option('--model <model-name>', 'Override the AI model used for generation')
+    .option('--provider <provider>', 'AI provider to use: "ollama" or "anthropic" (auto-detected if omitted)')
     .action(async (description, options) => {
       await generateSkillAction(description, options);
     });
@@ -38,6 +40,7 @@ export function createProgram(
     .description('Regenerate prompts.md for an existing skill')
     .option('-o, --output <dir>', 'Skills directory', './skills')
     .option('--dry-run', 'Dry run regeneration', false)
+    .option('--provider <provider>', 'AI provider to use: "ollama" or "anthropic" (auto-detected if omitted)')
     .action(async (skillName, options) => {
       await regeneratePromptAction(skillName, options);
     });
@@ -47,6 +50,7 @@ export function createProgram(
     .description('Regenerate tests.yaml for an existing skill')
     .option('-o, --output <dir>', 'Skills directory', './skills')
     .option('--dry-run', 'Dry run regeneration', false)
+    .option('--provider <provider>', 'AI provider to use: "ollama" or "anthropic" (auto-detected if omitted)')
     .action(async (skillName, options) => {
       await regenerateTestsAction(skillName, options);
     });
@@ -56,6 +60,7 @@ export function createProgram(
     .description('Regenerate README.md for an existing skill')
     .option('-o, --output <dir>', 'Skills directory', './skills')
     .option('--dry-run', 'Dry run regeneration', false)
+    .option('--provider <provider>', 'AI provider to use: "ollama" or "anthropic" (auto-detected if omitted)')
     .action(async (skillName, options) => {
       await regenerateReadmeAction(skillName, options);
     });

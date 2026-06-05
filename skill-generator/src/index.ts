@@ -52,6 +52,7 @@ async function handleGenerateSkill(description: string | undefined, options: Gen
       outputDir: options.output || './skills',
       dryRun: options.dryRun,
       model: options.model,
+      provider: options.provider as 'anthropic' | 'ollama' | undefined,
     });
   } catch (error: any) {
     logger.error(`Failed to generate skill: ${error.message}`);
@@ -72,7 +73,7 @@ async function handleRegeneratePrompt(skillName: string, options: GenerateOption
     }
 
     const skillMetadata = yaml.load(fs.readFileSync(skillYamlPath, 'utf8')) as any;
-    const aiClient = new AIClient();
+    const aiClient = await AIClient.create(options.provider as 'anthropic' | 'ollama' | undefined);
     const payload = await aiClient.generateSkill(`Regenerate detailed prompts for: ${skillMetadata.description || skillName}`);
 
     const promptReplacements = {
@@ -116,7 +117,7 @@ async function handleRegenerateTests(skillName: string, options: GenerateOptions
     }
 
     const skillMetadata = yaml.load(fs.readFileSync(skillYamlPath, 'utf8')) as any;
-    const aiClient = new AIClient();
+    const aiClient = await AIClient.create(options.provider as 'anthropic' | 'ollama' | undefined);
     const payload = await aiClient.generateSkill(`Regenerate tests for skill described as: ${skillMetadata.description || skillName}`);
 
     const testsReplacements = {
@@ -155,7 +156,7 @@ async function handleRegenerateReadme(skillName: string, options: GenerateOption
     }
 
     const skillMetadata = yaml.load(fs.readFileSync(skillYamlPath, 'utf8')) as any;
-    const aiClient = new AIClient();
+    const aiClient = await AIClient.create(options.provider as 'anthropic' | 'ollama' | undefined);
     const payload = await aiClient.generateSkill(`Regenerate README markdown documentation for: ${skillMetadata.description || skillName}`);
 
     const readmeReplacements = {
@@ -195,25 +196,30 @@ Here is the architectural data flow diagram illustrating the end-to-end scaffold
 \`\`\`mermaid
 graph TD
     A[CLI Input / User Prompt] --> B[SkillGenerator Orchestrator]
-    B --> C[AI Client - Anthropic Claude]
-    C --> D[Generation Payload JSON]
-    D --> E[Template Manager]
-    E --> F[Validation Layer - Zod & YAML]
-    F --> G[SkillWriter Filesystem]
-    G --> H[Output: skill.yaml]
-    G --> I[Output: prompts.md]
-    G --> J[Output: tests.yaml]
-    G --> K[Output: README.md]
-    G --> L[Skill Quality Scorer]
+    B --> C{Provider Selection}
+    C -->|--provider ollama or auto-detected| D[OllamaProvider - Local qwen2.5-coder:7b]
+    C -->|--provider anthropic or fallback| E[AnthropicProvider - Claude]
+    D --> F[Generation Payload JSON]
+    E --> F
+    F --> G[Template Manager]
+    G --> H[Validation Layer - Zod & YAML]
+    H --> I[SkillWriter Filesystem]
+    I --> J[Output: skill.yaml]
+    I --> K[Output: prompts.md]
+    I --> L[Output: tests.yaml]
+    I --> M[Output: README.md]
+    I --> N[Skill Quality Scorer]
 \`\`\`
 
 ## Component Responsibilities
-1. **CLI / Input Manager**: Collects natural language requests (or enters interactive prompting).
+1. **CLI / Input Manager**: Collects natural language requests (or enters interactive prompting). Supports \`--provider\` flag to explicitly select the AI backend.
 2. **SkillGenerator**: Coordinates compilation phases, replacements mapping, and verification.
-3. **AI Client**: Communicates with Anthropic models to synthesize capability structures, test inputs, and documentation sections.
-4. **Template Manager**: Interleaves scaffolding structures with the AI responses.
-5. **Validation Layer**: Rejects outputs that violate semantic formatting or test sizing limits.
-6. **Skill Quality Scorer**: Audits output directories to calculate an operational score (0-100).
+3. **Provider Selection**: Auto-detects a running local Ollama instance (\`qwen2.5-coder:7b\`). Falls back to Anthropic if unavailable or when \`ANTHROPIC_API_KEY\` is set and \`--provider anthropic\` is used.
+4. **OllamaProvider**: Calls \`http://localhost:11434/api/generate\` — no API key required. Ideal for local development and contributor onboarding.
+5. **AnthropicProvider**: Calls Claude via the Anthropic SDK. Requires \`ANTHROPIC_API_KEY\`.
+6. **Template Manager**: Interleaves scaffolding structures with the AI responses.
+7. **Validation Layer**: Rejects outputs that violate semantic formatting or test sizing limits.
+8. **Skill Quality Scorer**: Audits output directories to calculate an operational score (0–100).
 `;
 
     const filePath = path.resolve(process.cwd(), 'skill-generation-architecture.md');

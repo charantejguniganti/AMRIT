@@ -11,15 +11,14 @@ export interface GeneratorConfig {
   outputDir: string;
   dryRun?: boolean;
   model?: string;
+  provider?: 'anthropic' | 'ollama';
 }
 
 export class SkillGenerator {
-  private aiClient: AIClient;
   private templateManager: TemplateManager;
   private skillWriter: SkillWriter;
 
   constructor() {
-    this.aiClient = new AIClient();
     this.templateManager = new TemplateManager();
     this.skillWriter = new SkillWriter();
   }
@@ -30,8 +29,11 @@ export class SkillGenerator {
   public async generate(description: string, config: GeneratorConfig): Promise<void> {
     logger.info(`Starting generation workflow for skill: "${description}"`);
 
-    // 1. Fetch AI Generation payload
-    const payload = await this.aiClient.generateSkill(description, config.model);
+    // 1. Resolve AI provider (auto-detects Ollama if --provider is omitted)
+    const aiClient = await AIClient.create(config.provider, config.model);
+
+    // 2. Fetch AI Generation payload
+    const payload = await aiClient.generateSkill(description, config.model);
 
     // 2. Validate skill name to ensure safety
     if (!validateSkillName(payload.name)) {

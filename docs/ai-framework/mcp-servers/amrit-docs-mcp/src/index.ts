@@ -175,9 +175,14 @@ async function fetchGitHubReadme(repoName: string): Promise<string> {
       );
 
       return data;
-    } catch {
-      // Branch not found or all retries exhausted for this branch — try next
-      continue;
+    } catch (error: any) {
+      // Only try the next branch if the README/branch does not exist
+      if (error?.status === 404 || error?.response?.status === 404) {
+        continue;
+      }
+
+      // Re-throw network, rate-limit, and other API errors
+      throw error;
     }
   }
 

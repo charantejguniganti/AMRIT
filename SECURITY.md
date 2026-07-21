@@ -89,7 +89,6 @@ If you are deploying AMRIT in a production environment, we recommend:
 - **Use environment variables**: Never hardcode credentials or API keys. Use `.env` files and secrets management systems.
 - **Enable HTTPS**: All services should be served over TLS/SSL.
 - **Restrict CORS**: Configure allowed origins strictly in each API service.
-- **Database security**: Ensure `AMRIT-DB` is not publicly accessible; use role-based access control.
 - **Monitor audit logs**: Enable and regularly review application and infrastructure audit logs.
 
 ---
